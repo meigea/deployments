@@ -1,17 +1,5 @@
 #!/bin/bash
 
-cat > /etc/nginx/waf-help.conf << EOF
-limit_req_zone $binary_remote_addr zone=allips:10m rate=20r/s;
-proxy_cache_path /tmp/ levels=1:2 keys_zone=cya_waf_cache:10m max_size=10g inactive=60m use_temp_path=off;
-
-log_format  custom '$remote_addr - $remote_user [$time_local] '
-'"$request" $status $body_bytes_sent '
-'"$http_referer" "$http_user_agent" '
-'"$http_x_forwarded_for" $request_id ';
-
-EOF
-
-
 cat > /etc/nginx/nginx.conf << EOF
 user root;
 worker_processes 4;
@@ -75,11 +63,27 @@ http {
 
     proxy_headers_hash_max_size 51200;
     proxy_headers_hash_bucket_size 6400;
-    include waf-help.conf;
-    include vhost/*.conf;
+    include waf-help.conf; ## 辅助配置
+    include vhost/*.conf; ## server配置
 }
 
 EOF
 
+## server 存储的文件
+if [ -d "/etc/nginx/vhost" ]; then
+  mkdir -p /etc/nginx/vhost
+fi
 
+## 帮助文件的复位
+if [ ! -f "/etc/nginx/waf-help.conf" ]; then
+cat > /etc/nginx/waf-help.conf << EOF
+limit_req_zone $binary_remote_addr zone=allips:10m rate=20r/s;
+proxy_cache_path /tmp/ levels=1:2 keys_zone=cya_waf_cache:10m max_size=10g inactive=60m use_temp_path=off;
 
+log_format  custom '$remote_addr - $remote_user [$time_local] '
+'"$request" $status $body_bytes_sent '
+'"$http_referer" "$http_user_agent" '
+'"$http_x_forwarded_for" $request_id ';
+
+EOF
+fi
